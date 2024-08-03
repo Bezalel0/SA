@@ -1,18 +1,11 @@
 -- Configuration
-local AIM_SMOOTHNESS = 0.1  -- Adjust this for smoother aim adjustments
-local AIM_FOV = 100  -- Field of view within which the aim lock activates
+local AIM_SMOOTHNESS = 0.05  -- Smoothness of the aim adjustment
+local AIM_FOV = 100  -- Field of view for the aim lock
 local AIM_CHECK_INTERVAL = 0.1  -- Time in seconds between aim checks
 
 -- Utility function to get the player's HumanoidRootPart
 local function getHRP(player)
     return player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-end
-
--- Function to predict target's future position
-local function predictTargetPosition(targetHRP, predictionTime)
-    local velocity = targetHRP.Velocity
-    local futurePosition = targetHRP.Position + (velocity * predictionTime)
-    return futurePosition
 end
 
 -- Function to find the nearest enemy within the FOV
@@ -40,28 +33,31 @@ local function findNearestEnemy()
     return closestEnemy
 end
 
--- Function to simulate aiming at the target
-local function simulateAim(targetHRP)
+-- Function to adjust the aim direction subtly
+local function adjustAimDirection(targetHRP)
     local localPlayer = game:GetService("Players").LocalPlayer
     local camera = game:GetService("Workspace").CurrentCamera
-    if not camera then return end
+    if not camera or not targetHRP then return end
 
-    local predictedPosition = predictTargetPosition(targetHRP, 0.5) -- Predict for half a second
-    local screenPosition = camera:WorldToScreenPoint(predictedPosition)
-    
-    -- Simulate aiming by adjusting the crosshair position
-    -- (Note: Adjust this part based on how the game handles crosshair adjustments)
-    -- Here, we're just printing the predicted position as an example
-    print("Aiming at: ", screenPosition.X, screenPosition.Y)
+    local targetPosition = targetHRP.Position
+    local localHRP = getHRP(localPlayer)
+    if not localHRP then return end
+
+    local aimDirection = (targetPosition - localHRP.Position).Unit
+    local currentCFrame = camera.CFrame
+    local newCFrame = CFrame.lookAt(currentCFrame.Position, currentCFrame.Position + aimDirection)
+
+    -- Smoothly interpolate between current and new CFrame
+    camera.CFrame = currentCFrame:Lerp(newCFrame, AIM_SMOOTHNESS)
 end
 
 -- Main loop
 while true do
-    wait(AIM_CHECK_INTERVAL)  -- Time between checks
+    wait(AIM_CHECK_INTERVAL)  -- Time between aim checks
 
     local nearestEnemy = findNearestEnemy()
     if nearestEnemy and getHRP(nearestEnemy) then
         local enemyHRP = getHRP(nearestEnemy)
-        simulateAim(enemyHRP)
+        adjustAimDirection(enemyHRP)
     end
 end
