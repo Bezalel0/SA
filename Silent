@@ -4,8 +4,22 @@ local MAX_DISTANCE = 200
 -- Toggle to enable or disable the functionality
 getgenv().toggled = true
 
+local replicatedStorage = game:GetService("ReplicatedStorage")
+local raycastModule
+
+-- Debugging print
+print("Searching for RayCast module in ReplicatedStorage...")
+
+-- Check if the module exists in ReplicatedStorage
+if replicatedStorage:FindFirstChild("Module") and replicatedStorage.Module:FindFirstChild("RayCast") then
+    raycastModule = require(replicatedStorage.Module.RayCast)
+    print("RayCast module found!")
+else
+    print("RayCast module not found in ReplicatedStorage. Please verify the path and name.")
+    return
+end
+
 -- Backup the original RayIgnoreNonCollideWithIgnoreList function
-local raycastModule = require(game:GetService("ReplicatedStorage").Module.RayCast)
 getgenv().old = getgenv().old or raycastModule.RayIgnoreNonCollideWithIgnoreList
 
 if getgenv().toggled then
