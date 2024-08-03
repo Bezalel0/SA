@@ -4,26 +4,6 @@ local MAX_DISTANCE = 200
 -- Toggle to enable or disable the functionality
 getgenv().toggled = true
 
--- Function to find the RayCast module in ReplicatedStorage
-local function findRayCastModule()
-    local replicatedStorage = game:GetService("ReplicatedStorage")
-
-    local function recursiveSearch(parent)
-        for _, child in ipairs(parent:GetChildren()) do
-            if child:IsA("ModuleScript") and child.Name == "RayCast" then
-                return child
-            end
-            local found = recursiveSearch(child)
-            if found then
-                return found
-            end
-        end
-        return nil
-    end
-
-    return recursiveSearch(replicatedStorage)
-end
-
 -- Function to find the nearest enemy
 local function findNearestEnemy()
     local nearestDistance, nearestEnemy = MAX_DISTANCE, nil
@@ -41,36 +21,24 @@ local function findNearestEnemy()
 end
 
 if getgenv().toggled then
-    local rayCastModule = findRayCastModule()
+    local function customRaycast(startPos, direction, ignoreList)
+        local nearestEnemy = findNearestEnemy()
 
-    if rayCastModule then
-        local oldRayIgnoreNonCollideWithIgnoreList = require(rayCastModule).RayIgnoreNonCollideWithIgnoreList
-        getgenv().old = oldRayIgnoreNonCollideWithIgnoreList
+        -- If an enemy is found and it's within the raycast range
+        if nearestEnemy then
+            local targetPosition = nearestEnemy.Character.HumanoidRootPart.Position
+            local rayDirection = (targetPosition - startPos).Unit * direction.Magnitude
 
-        require(rayCastModule).RayIgnoreNonCollideWithIgnoreList = function(...)
-            local nearestEnemy = findNearestEnemy()
-
-            -- Call the original function and get its arguments
-            local args = {oldRayIgnoreNonCollideWithIgnoreList(...)}
-
-            -- Debugging prints
-            print("Script Name: " .. tostring(getfenv(2).script))
-            print("Nearest Enemy: " .. (nearestEnemy and nearestEnemy.Name or "None"))
-
-            -- If the script is BulletEmitter or Taser and an enemy is found, modify the target
-            if (tostring(getfenv(2).script) == "BulletEmitter" or tostring(getfenv(2).script) == "Taser") and nearestEnemy then
-                args[1] = nearestEnemy.Character.HumanoidRootPart
-                args[2] = nearestEnemy.Character.HumanoidRootPart.Position
-            end
-
-            return unpack(args)
+            return workspace:Raycast(startPos, rayDirection, {ignoreList, nearestEnemy.Character})
+        else
+            return workspace:Raycast(startPos, direction, ignoreList)
         end
-    else
-        warn("RayCast module not found in ReplicatedStorage.")
     end
+
+    -- Hook into the existing raycasting function, if possible
+    -- Assuming you have a function or method to hook into
+    -- For example, if the game uses `BulletEmitter` or `Taser`, you might modify their raycasting functions
+
 else
-    local rayCastModule = findRayCastModule()
-    if rayCastModule then
-        require(rayCastModule).RayIgnoreNonCollideWithIgnoreList = getgenv().old
-    end
+    -- Restore original functionality if toggled off
 end
