@@ -1,6 +1,6 @@
 -- Configuration
 local MAX_DISTANCE = 200
-local AIM_SMOOTHNESS = 0.2 -- Adjust this value for smoother aiming
+local AIM_SMOOTHNESS = 0.2 -- Adjust this for smoother aiming
 local AIM_FOV = 50 -- Field of view within which the aimbot works
 local AIM_OFFSET = 1 -- Offset to slightly adjust the aim position to make it less obvious
 
@@ -8,10 +8,12 @@ local AIM_OFFSET = 1 -- Offset to slightly adjust the aim position to make it le
 local function findNearestEnemy()
     local nearestDistance, nearestEnemy = MAX_DISTANCE, nil
     local localPlayer = game:GetService("Players").LocalPlayer
+    local character = localPlayer.Character
+    if not character or not character:FindFirstChild("HumanoidRootPart") then return nil end
 
     for _, player in pairs(game:GetService("Players"):GetPlayers()) do
         if player.Team ~= localPlayer.Team and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-            local distance = (player.Character.HumanoidRootPart.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
+            local distance = (player.Character.HumanoidRootPart.Position - character.HumanoidRootPart.Position).Magnitude
             if distance < nearestDistance then
                 nearestDistance, nearestEnemy = distance, player
             end
@@ -32,8 +34,13 @@ local function applySubtleAimbot(targetPosition)
     local offsetDirection = direction * AIM_OFFSET
     local aimPosition = targetPosition - offsetDirection -- Slightly offset target position
 
-    local newCFrame = CFrame.lookAt(currentPosition, aimPosition)
-    hrp.CFrame = hrp.CFrame:Lerp(newCFrame, AIM_SMOOTHNESS) -- Smooth transition
+    local targetCFrame = CFrame.lookAt(currentPosition, aimPosition)
+    hrp.CFrame = hrp.CFrame:Lerp(targetCFrame, AIM_SMOOTHNESS) -- Smooth transition
+
+    -- Debugging information
+    print("Current Position:", currentPosition)
+    print("Target Position:", targetPosition)
+    print("Aim Position:", aimPosition)
 end
 
 -- Main loop
@@ -46,10 +53,13 @@ while true do
         local enemyPosition = nearestEnemy.Character.HumanoidRootPart.Position
         local playerPosition = game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.Position
 
+        -- Debugging information
+        print("Nearest Enemy:", nearestEnemy.Name)
+        print("Enemy Position:", enemyPosition)
+
         -- Check if the enemy is within the FOV
         if (enemyPosition - playerPosition).Magnitude < AIM_FOV then
             applySubtleAimbot(enemyPosition)
         end
     end
 end
-
