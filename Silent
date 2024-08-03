@@ -1,6 +1,6 @@
 -- Configuration
-local AIM_SMOOTHNESS = 0.05  -- Smoothness of the aim adjustment
-local AIM_FOV = 100  -- Field of view for the aim lock
+local AIM_SMOOTHNESS = 0.1  -- Smoothness of the aim adjustment, lower is smoother
+local AIM_FOV = 50  -- Field of view within which the aim lock activates
 local AIM_CHECK_INTERVAL = 0.1  -- Time in seconds between aim checks
 
 -- Utility function to get the player's HumanoidRootPart
@@ -33,7 +33,7 @@ local function findNearestEnemy()
     return closestEnemy
 end
 
--- Function to adjust the aim direction subtly
+-- Function to adjust the aim direction smoothly
 local function adjustAimDirection(targetHRP)
     local localPlayer = game:GetService("Players").LocalPlayer
     local camera = game:GetService("Workspace").CurrentCamera
@@ -45,7 +45,7 @@ local function adjustAimDirection(targetHRP)
 
     local aimDirection = (targetPosition - localHRP.Position).Unit
     local currentCFrame = camera.CFrame
-    local newCFrame = CFrame.lookAt(currentCFrame.Position, currentCFrame.Position + aimDirection)
+    local newCFrame = CFrame.lookAt(currentCFrame.Position, targetPosition)
 
     -- Smoothly interpolate between current and new CFrame
     camera.CFrame = currentCFrame:Lerp(newCFrame, AIM_SMOOTHNESS)
