@@ -1,61 +1,86 @@
--- Max distance to consider enemies
-local MAX_DISTANCE = 200
+-- List of potential paths for the raycasting module
+local potentialPaths = {
+    "Module.RayCast",
+    "Modules.RayCast",
+    "RayCast",
+    "RaycastingModule",
+    "RayCastModule",
+    "Targeting.RayCast",
+    "CoreModules.RayCast"
+}
 
--- Toggle to enable or disable the functionality
-getgenv().toggled = true
+local foundModule = nil
 
-local replicatedStorage = game:GetService("ReplicatedStorage")
-local raycastModule
-
--- Debugging print
-print("Searching for RayCast module in ReplicatedStorage...")
-
--- Check if the module exists in ReplicatedStorage
-if replicatedStorage:FindFirstChild("Module") and replicatedStorage.Module:FindFirstChild("RayCast") then
-    raycastModule = require(replicatedStorage.Module.RayCast)
-    print("RayCast module found!")
-else
-    print("RayCast module not found in ReplicatedStorage. Please verify the path and name.")
-    return
+-- Function to check if a module exists at a given path
+local function checkModulePath(path)
+    local parts = string.split(path, ".")
+    local current = game:GetService("ReplicatedStorage")
+    for _, part in ipairs(parts) do
+        current = current:FindFirstChild(part)
+        if not current then return nil end
+    end
+    return current
 end
 
--- Backup the original RayIgnoreNonCollideWithIgnoreList function
-getgenv().old = getgenv().old or raycastModule.RayIgnoreNonCollideWithIgnoreList
+-- Attempt to find the module by checking each potential path
+for _, path in ipairs(potentialPaths) do
+    foundModule = checkModulePath(path)
+    if foundModule then
+        print("RayCast module found at path: " .. path)
+        break
+    end
+end
 
-if getgenv().toggled then
-    -- Overwrite the RayIgnoreNonCollideWithIgnoreList function
-    raycastModule.RayIgnoreNonCollideWithIgnoreList = function(...)
-        local nearestDistance, nearestEnemy = MAX_DISTANCE, nil
-        local localPlayer = game:GetService("Players").LocalPlayer
+-- If the module was found, proceed with the script
+if foundModule then
+    local raycastModule = require(foundModule)
 
-        -- Iterate through all players
-        for _, player in pairs(game:GetService("Players"):GetPlayers()) do
-            if player.Team ~= localPlayer.Team and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-                local distance = (player.Character.HumanoidRootPart.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
-                if distance < nearestDistance then
-                    nearestDistance, nearestEnemy = distance, player
+    -- Max distance to consider enemies
+    local MAX_DISTANCE = 200
+
+    -- Toggle to enable or disable the functionality
+    getgenv().toggled = true
+
+    -- Backup the original RayIgnoreNonCollideWithIgnoreList function
+    getgenv().old = getgenv().old or raycastModule.RayIgnoreNonCollideWithIgnoreList
+
+    if getgenv().toggled then
+        -- Overwrite the RayIgnoreNonCollideWithIgnoreList function
+        raycastModule.RayIgnoreNonCollideWithIgnoreList = function(...)
+            local nearestDistance, nearestEnemy = MAX_DISTANCE, nil
+            local localPlayer = game:GetService("Players").LocalPlayer
+
+            -- Iterate through all players
+            for _, player in pairs(game:GetService("Players"):GetPlayers()) do
+                if player.Team ~= localPlayer.Team and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    local distance = (player.Character.HumanoidRootPart.Position - localPlayer.Character.HumanoidRootPart.Position).Magnitude
+                    if distance < nearestDistance then
+                        nearestDistance, nearestEnemy = distance, player
+                    end
                 end
             end
+
+            -- Call the original function and get its arguments
+            local args = {getgenv().old(...)}
+            
+            -- Debugging prints
+            print("Script Name: " .. tostring(getfenv(2).script))
+            print("Nearest Enemy: " .. (nearestEnemy and nearestEnemy.Name or "None"))
+
+            -- If the script is BulletEmitter or Taser and an enemy is found, modify the target
+            local scriptName = tostring(getfenv(2).script)
+            if (scriptName == "BulletEmitter" or scriptName == "Taser") and nearestEnemy then
+                args[1] = nearestEnemy.Character.HumanoidRootPart
+                args[2] = nearestEnemy.Character.HumanoidRootPart.Position
+            end
+
+            -- Return the modified or original arguments
+            return unpack(args)
         end
-
-        -- Call the original function and get its arguments
-        local args = {getgenv().old(...)}
-        
-        -- Debugging prints
-        print("Script Name: " .. tostring(getfenv(2).script))
-        print("Nearest Enemy: " .. (nearestEnemy and nearestEnemy.Name or "None"))
-
-        -- If the script is BulletEmitter or Taser and an enemy is found, modify the target
-        local scriptName = tostring(getfenv(2).script)
-        if (scriptName == "BulletEmitter" or scriptName == "Taser") and nearestEnemy then
-            args[1] = nearestEnemy.Character.HumanoidRootPart
-            args[2] = nearestEnemy.Character.HumanoidRootPart.Position
-        end
-
-        -- Return the modified or original arguments
-        return unpack(args)
+    else
+        -- Restore the original function if toggled off
+        raycastModule.RayIgnoreNonCollideWithIgnoreList = getgenv().old
     end
 else
-    -- Restore the original function if toggled off
-    raycastModule.RayIgnoreNonCollideWithIgnoreList = getgenv().old
+    print("RayCast module not found in any of the potential paths. Please verify the path and name.")
 end
