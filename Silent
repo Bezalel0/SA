@@ -6,7 +6,13 @@ local potentialPaths = {
     "RaycastingModule",
     "RayCastModule",
     "Targeting.RayCast",
-    "CoreModules.RayCast"
+    "CoreModules.RayCast",
+    "GameModules.RayCast",
+    "Services.RayCast",
+    "UtilityModules.RayCast",
+    "Systems.RayCast",
+    "RayCastSystem",
+    "GameServices.RayCast"
 }
 
 local foundModule = nil
