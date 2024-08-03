@@ -5,11 +5,12 @@ local MAX_DISTANCE = 200
 getgenv().toggled = true
 
 -- Backup the original RayIgnoreNonCollideWithIgnoreList function
-getgenv().old = getgenv().old or require(game:GetService("ReplicatedStorage").Module.RayCast).RayIgnoreNonCollideWithIgnoreList
+local raycastModule = require(game:GetService("ReplicatedStorage").Module.RayCast)
+getgenv().old = getgenv().old or raycastModule.RayIgnoreNonCollideWithIgnoreList
 
 if getgenv().toggled then
     -- Overwrite the RayIgnoreNonCollideWithIgnoreList function
-    require(game:GetService("ReplicatedStorage").Module.RayCast).RayIgnoreNonCollideWithIgnoreList = function(...)
+    raycastModule.RayIgnoreNonCollideWithIgnoreList = function(...)
         local nearestDistance, nearestEnemy = MAX_DISTANCE, nil
         local localPlayer = game:GetService("Players").LocalPlayer
 
@@ -26,6 +27,10 @@ if getgenv().toggled then
         -- Call the original function and get its arguments
         local args = {getgenv().old(...)}
         
+        -- Debugging prints
+        print("Script Name: " .. tostring(getfenv(2).script))
+        print("Nearest Enemy: " .. (nearestEnemy and nearestEnemy.Name or "None"))
+
         -- If the script is BulletEmitter or Taser and an enemy is found, modify the target
         local scriptName = tostring(getfenv(2).script)
         if (scriptName == "BulletEmitter" or scriptName == "Taser") and nearestEnemy then
@@ -38,5 +43,5 @@ if getgenv().toggled then
     end
 else
     -- Restore the original function if toggled off
-    require(game:GetService("ReplicatedStorage").Module.RayCast).RayIgnoreNonCollideWithIgnoreList = getgenv().old
+    raycastModule.RayIgnoreNonCollideWithIgnoreList = getgenv().old
 end
