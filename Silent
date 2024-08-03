@@ -1,8 +1,8 @@
--- Max distance to consider enemies
+-- Configuration
 local MAX_DISTANCE = 200
-
--- Toggle to enable or disable the functionality
-getgenv().toggled = true
+local AIM_SMOOTHNESS = 0.2 -- Adjust this value for smoother aiming
+local AIM_FOV = 50 -- Field of view within which the aimbot works
+local AIM_OFFSET = 1 -- Offset to slightly adjust the aim position to make it less obvious
 
 -- Function to find the nearest enemy
 local function findNearestEnemy()
@@ -20,25 +20,36 @@ local function findNearestEnemy()
     return nearestEnemy
 end
 
-if getgenv().toggled then
-    local function customRaycast(startPos, direction, ignoreList)
-        local nearestEnemy = findNearestEnemy()
+-- Function to apply subtle aimbot
+local function applySubtleAimbot(targetPosition)
+    local localPlayer = game:GetService("Players").LocalPlayer
+    local character = localPlayer.Character
+    local hrp = character and character:FindFirstChild("HumanoidRootPart")
+    if not hrp then return end
 
-        -- If an enemy is found and it's within the raycast range
-        if nearestEnemy then
-            local targetPosition = nearestEnemy.Character.HumanoidRootPart.Position
-            local rayDirection = (targetPosition - startPos).Unit * direction.Magnitude
+    local currentPosition = hrp.Position
+    local direction = (targetPosition - currentPosition).Unit
+    local offsetDirection = direction * AIM_OFFSET
+    local aimPosition = targetPosition - offsetDirection -- Slightly offset target position
 
-            return workspace:Raycast(startPos, rayDirection, {ignoreList, nearestEnemy.Character})
-        else
-            return workspace:Raycast(startPos, direction, ignoreList)
+    local newCFrame = CFrame.lookAt(currentPosition, aimPosition)
+    hrp.CFrame = hrp.CFrame:Lerp(newCFrame, AIM_SMOOTHNESS) -- Smooth transition
+end
+
+-- Main loop
+while true do
+    wait(0.1) -- Adjust the loop interval as needed
+
+    local nearestEnemy = findNearestEnemy()
+
+    if nearestEnemy then
+        local enemyPosition = nearestEnemy.Character.HumanoidRootPart.Position
+        local playerPosition = game:GetService("Players").LocalPlayer.Character.HumanoidRootPart.Position
+
+        -- Check if the enemy is within the FOV
+        if (enemyPosition - playerPosition).Magnitude < AIM_FOV then
+            applySubtleAimbot(enemyPosition)
         end
     end
-
-    -- Hook into the existing raycasting function, if possible
-    -- Assuming you have a function or method to hook into
-    -- For example, if the game uses `BulletEmitter` or `Taser`, you might modify their raycasting functions
-
-else
-    -- Restore original functionality if toggled off
 end
+
